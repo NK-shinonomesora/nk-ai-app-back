@@ -1,6 +1,6 @@
 from fastapi import FastAPI
-
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 app = FastAPI()
 
@@ -19,6 +19,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+class Chat(BaseModel):
+    message: str
 
 @app.get("/")
 def read_root():
@@ -28,3 +30,7 @@ def read_root():
 @app.get("/items/{item_id}")
 def read_item(item_id: int, q: str = None):
     return {"item_id": item_id, "q": q}
+
+@app.post("/chat/")
+async def create_chat(message: Chat):
+    return message
