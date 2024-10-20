@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from transformers import pipeline
+from torch.nn.functional import cosine_similarity
 
 app = FastAPI()
 
@@ -56,14 +57,37 @@ async def natural_language_inference(inputs: TwoInputMessage):
     result = nli_pipeline({"text": inputs.firstText, "text_pair": inputs.secondText})
     label = result["label"]
     jaLabel = ""
+
     if label == "entailment":
         jaLabel = "含意"
     elif label == "contradiction":
         jaLabel = "矛盾"
     else:
         jaLabel = "中立"
+
     return {
         "text": "1.  " + inputs.firstText + " / 2. " + inputs.secondText,
         "label": jaLabel,
         "score": '{:.2%}'.format(result["score"])
+    }
+
+@app.post("/semantic_textual_similarity")
+async def semantic_textual_similarity(inputs: TwoInputMessage):
+    sim_enc_pipeline = pipeline(
+        model="llm-book/bert-base-japanese-v3-unsup-simcse-jawiki",
+        task="feature-extraction"
+    )
+
+    text_emb = sim_enc_pipeline(inputs.firstText, return_tensors=True)[0][0]
+    sim_emb = sim_enc_pipeline(inputs.secondText, return_tensors=True)[0][0]
+
+    # textとsim_textの類似度を計算
+    sim_pair_score = cosine_similarity(text_emb, sim_emb, dim=0)
+
+    score = (sim_pair_score.item() + 1.0) / 2.0
+    
+    return {
+        "text": "1.  " + inputs.firstText + " / 2. " + inputs.secondText,
+        "label": "-",
+        "score": '{:.2%}'.format(score)
     }
