@@ -1,10 +1,47 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ValidationError, field_validator
 from transformers import pipeline
 from torch.nn.functional import cosine_similarity
+from typing import Dict, List
+from pydantic_core import ErrorDetails, PydanticCustomError
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
+
+# カスタムエラーメッセージ
+CUSTOM_MESSAGES = {
+    "string_too_short": "{input}は必須項目です。",
+    "string_too_long": "{input}は{max_length}文字以下で入力してください。",
+}
+
+def convert_errors(
+    e: ValidationError, custom_messages: Dict[str, str]
+) -> List[ErrorDetails]:
+    new_errors: List[ErrorDetails] = []
+    for error in e.errors():
+        custom_message = custom_messages.get(error['type'])
+        if custom_message:
+            ctx = error.get('ctx')
+            input = error.get("loc")
+            error['msg'] = (
+                custom_message.format(input=input[1], **ctx) if ctx else custom_message
+            )
+        new_errors.append(error)
+    return new_errors
 
 app = FastAPI()
+
+# 例外ハンドラをオーバーライド
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    # ここでエラーメッセージを日本語に置換
+    exc = convert_errors(e=exc, custom_messages=CUSTOM_MESSAGES)
+
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content=jsonable_encoder({"detail": exc}),
+    )
 
 origins = [
     "http://localhost.tiangolo.com",
@@ -25,7 +62,17 @@ class Chat(BaseModel):
     message: str
 
 class InputMessage(BaseModel):
-    text: str
+    text: str = Field(min_length=1, max_length=10)
+
+    @field_validator('text')
+    def text_must_not_equal_hello(cls, v):
+        if v == 'hello':
+            raise PydanticCustomError(
+                'not_a_hello',
+                '"{wrong_value}"は使用禁止です！',
+                dict(wrong_value=v),
+            )
+        return v
 
 class TwoInputMessage(BaseModel):
     firstText: str
