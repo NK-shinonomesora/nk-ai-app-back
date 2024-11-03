@@ -1,13 +1,24 @@
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request, status, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, ValidationError, field_validator
 from transformers import pipeline
 from torch.nn.functional import cosine_similarity
-from typing import Dict, List
+from typing import Dict, List, Annotated, Optional
 from pydantic_core import ErrorDetails, PydanticCustomError
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
+from sqlmodel import Field, Session, SQLModel, create_engine, select
+
+mysql_url = "mysql+pymysql://root:Salto0916_@localhost/nk_ai"
+
+engine = create_engine(mysql_url)
+
+def get_session():
+    with Session(engine) as session:
+        yield session
+
+SessionDep = Annotated[Session, Depends(get_session)]
 
 # カスタムエラーメッセージ
 CUSTOM_MESSAGES = {
@@ -78,10 +89,24 @@ class TwoInputMessage(BaseModel):
     firstText: str
     secondText: str
 
+class Memo(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    title: str = Field(index=True)
+    content: str = Field(min_length=1, max_length=1000)
+
+    @field_validator('title')
+    def title_word_count_check(cls, v):
+        if len(v) < 1 or len(v) > 11:
+            raise PydanticCustomError(
+                'not_a_title',
+                'タイトルは1~10文字以下にしてください。',
+                dict(wrong_value=v),
+            )
+        return v
+
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
-
 
 @app.get("/items/{item_id}")
 def read_item(item_id: int, q: str = None):
@@ -138,3 +163,19 @@ async def semantic_textual_similarity(inputs: TwoInputMessage):
         "label": "-",
         "score": '{:.2%}'.format(score)
     }
+
+@app.post("/memo/")
+async def create_memo(memo: Memo, session: SessionDep) -> Memo:
+    session.add(memo)
+    session.commit()
+    session.refresh(memo)
+    return memo
+
+@app.get("/memos/")
+def read_memos(
+    session: SessionDep,
+    offset: int = 0,
+    limit: Annotated[int, Query(le=100)] = 100,
+) -> list[Memo]:
+    memos = session.exec(select(Memo).offset(offset).limit(limit)).all()
+    return memos
