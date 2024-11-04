@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, status, Depends, Query
+from fastapi import FastAPI, Request, status, Depends, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, ValidationError, field_validator
 from transformers import pipeline
@@ -9,6 +9,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from sqlmodel import Field, Session, SQLModel, create_engine, select
+import spacy
+import uuid
 
 mysql_url = "mysql+pymysql://root:Salto0916_@localhost/nk_ai"
 
@@ -90,7 +92,7 @@ class TwoInputMessage(BaseModel):
     secondText: str
 
 class Memo(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: str = Field(primary_key=True)
     title: str = Field(index=True)
     content: str = Field(min_length=1, max_length=1000)
 
@@ -103,14 +105,20 @@ class Memo(SQLModel, table=True):
                 dict(wrong_value=v),
             )
         return v
+    
+class Memo_Annotation(SQLModel, table=True):
+    id: Optional[int] = Field(primary_key=True)
+    memo_id: int
+    annotation_id: int
+
+class Annotation_Master(SQLModel, table=True):
+    id: Optional[int] = Field(primary_key=True)
+    label: str
+    word: str
 
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
-
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: str = None):
-    return {"item_id": item_id, "q": q}
 
 @app.post("/chat/")
 async def create_chat(message: Chat):
@@ -164,12 +172,56 @@ async def semantic_textual_similarity(inputs: TwoInputMessage):
         "score": '{:.2%}'.format(score)
     }
 
+def ner_pred(doc):
+    result = {}
+    for ent in doc.ents:
+        newData = {}
+        newData[ent.text] = ent.label_
+        result = {**result, **newData}
+    return result
+
+def named_entity_recognition(texts: List[str]):
+    lastResult = {}
+    nlp = spacy.load("./models/model-last")
+    for text in texts:
+        doc = nlp(text)
+        result = ner_pred(doc)
+        lastResult = {**lastResult, **result}
+    return lastResult
+
 @app.post("/memo/")
 async def create_memo(memo: Memo, session: SessionDep) -> Memo:
-    session.add(memo)
-    session.commit()
-    session.refresh(memo)
-    return memo
+    try:
+        memo_id = uuid.uuid4()
+        memo.id = memo_id
+        session.add(memo)
+
+        extractedWords = named_entity_recognition([memo.title, memo.content])
+        annotationMasterIds = []
+        for word, label in extractedWords.items():
+            statement = select(Annotation_Master.id).where(
+                Annotation_Master.label == label,
+                Annotation_Master.word == word
+                )
+            id = session.exec(statement).all()
+            annotationMasterIds.append(id)
+        
+        for annotation_id in annotationMasterIds:
+            model = Memo_Annotation()
+            model.memo_id = memo_id
+            model.annotation_id = annotation_id
+            session.add(model)
+            
+        session.commit()
+        session.refresh(memo)
+        session.refresh(model)
+
+        return memo
+    
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=400, detail="Failed to create memo") from e
+
 
 @app.get("/memos/")
 def read_memos(
@@ -179,3 +231,49 @@ def read_memos(
 ) -> list[Memo]:
     memos = session.exec(select(Memo).offset(offset).limit(limit)).all()
     return memos
+
+@app.get("/memo/search/")
+def search_memo(keyword: str, session: SessionDep,):
+    extractedWords = named_entity_recognition([keyword])
+    annotationMasters = []
+    for word, label in extractedWords.items():
+        statement = select(Annotation_Master.id, Annotation_Master.label).where(
+            Annotation_Master.label == label,
+            Annotation_Master.word == word
+            )
+        data = session.exec(statement).one()
+        annotationMasters.append(data)
+    
+    memoAnnotations = session.exec(select(Memo_Annotation.memo_id, Memo_Annotation.annotation_id)).all()
+    scores = {}
+    for memoAnnotation in memoAnnotations:
+        memo_id = memoAnnotation[0]
+        annotation_id = memoAnnotation[1]
+        for annotationMaster in annotationMasters:
+            annotation_master_id = annotationMaster[0]
+            annotation_label = annotationMaster[1]
+            score = 0
+            if annotation_id == annotation_master_id:
+                score = 2
+            else:
+                statement = select(Annotation_Master.label).where(Annotation_Master.id == annotation_id)
+                targetLabel = session.exec(statement).one()
+                if targetLabel == annotation_label:
+                    score = 1
+            if memo_id in scores:
+                scores[memo_id] = scores[memo_id] + score
+            else:
+                scores[memo_id] = score
+
+    sortedScores = sorted(scores.items(), reverse=True, key=lambda x : x[1])
+    topTwoScores = sortedScores[:3]
+    
+    memos = []
+
+    for memoInfo in topTwoScores:
+        memo_id = memoInfo[0]
+        statement = select(Memo).where(Memo.id == memo_id)
+        memo = session.exec(statement).one()
+        memos.append(memo)
+
+    return {"memos": memos}
