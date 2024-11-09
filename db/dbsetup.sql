@@ -5,6 +5,7 @@ CREATE TABLE memo (
     id VARCHAR(50) NOT NULL,
     title VARCHAR(50) NOT NULL,
     content VARCHAR(1000) NOT NULL,
+    created_at INT NOT NULL,
     PRIMARY KEY (id)
 );
 
@@ -27,9 +28,7 @@ CREATE TABLE memo_annotation (
 );
 
 -- INSERT INTO memo VALUES
--- ('0001A', 'memotitle', 'memocontent'),
--- ('0001B', 'memotitle2', 'memocontent2'),
--- ('0001C', 'memotitle3', 'memocontent3');
+-- (0, 'dummy', 'dummy', 1731120815);
 
 INSERT INTO annotation_master VALUES
 (1, 'Programming', 'C言語'),
