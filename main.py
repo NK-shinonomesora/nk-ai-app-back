@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, status, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from transformers import pipeline
 from torch.nn.functional import cosine_similarity
-from typing import List, Annotated
+from typing import List, Annotated, Dict
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
@@ -134,6 +134,15 @@ async def create_memo(memo: Memo, session: SessionDep) -> Memo:
         session.rollback()
         raise HTTPException(status_code=400, detail="Failed to create memo") from e
 
+
+@app.get("/memo/detail/")
+def read_memo(
+    memo_id: str,
+    session: SessionDep,
+) -> Dict[str, Memo]:
+    statement = select(Memo.id, Memo.title, Memo.content, Memo.created_at).where(Memo.id == memo_id)
+    memo = session.exec(statement).one()
+    return {"memo": memo}
 
 @app.get("/memos/")
 def read_memos(

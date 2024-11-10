@@ -22,7 +22,7 @@ class TwoInputMessage(BaseModel):
     secondText: str
 
 class Memo(SQLModel, table=True):
-    id: int = ModelField(primary_key=True)
+    id: str = ModelField(primary_key=True)
     title: str = ModelField(index=True)
     content: str = ModelField(min_length=1, max_length=1000)
     created_at: int
