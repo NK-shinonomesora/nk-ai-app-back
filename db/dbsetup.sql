@@ -22,9 +22,9 @@ CREATE TABLE memo_annotation (
     id INT NOT NULL AUTO_INCREMENT,
     memo_id VARCHAR(50) NOT NULL,
     annotation_id INT,
-    PRIMARY KEY (id),
-    FOREIGN KEY (memo_id) REFERENCES memo(id),
-    FOREIGN KEY (annotation_id) REFERENCES annotation_master(id)
+    PRIMARY KEY (id)
+    -- FOREIGN KEY (memo_id) REFERENCES memo(id),
+    -- FOREIGN KEY (annotation_id) REFERENCES annotation_master(id)
 );
 
 -- INSERT INTO memo VALUES

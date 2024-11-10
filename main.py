@@ -198,3 +198,23 @@ def search_memo(keyword: str, session: SessionDep,):
         memos.append(memo)
 
     return {"memos": memos}
+
+@app.delete("/memo/{memo_id}")
+async def delete_memo(
+    memo_id: str,
+    session: SessionDep,
+):
+    try:
+        memo = session.get(Memo, memo_id)
+        statement = select(Memo_Annotation).where(Memo_Annotation.memo_id == memo_id)
+        memo_annotations = session.exec(statement).all()
+
+        for memo_annotation in memo_annotations:
+            session.delete(memo_annotation)
+
+        session.delete(memo)
+        session.commit()
+    except Exception as e:
+        print(e)
+        session.rollback()
+        raise HTTPException(status_code=400, detail="Failed to delete memo") from e
