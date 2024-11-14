@@ -10,7 +10,7 @@ from sqlmodel import select
 import spacy
 from db.db_setting import SessionDep
 from validation.input_validation import convert_errors
-from db.classes import InputMessage, TwoInputMessage, Memo, Memo_Annotation, Annotation_Master
+from db.classes import InputMessage, TwoInputMessage, Memo, Memo_Annotation, Annotation_Master, InputMemo
 import time
 import uuid
 
@@ -101,11 +101,16 @@ def named_entity_recognition(texts: List[str]):
     return lastResult
 
 @app.post("/memo/")
-async def create_memo(memo: Memo, session: SessionDep) -> Memo:
+async def create_memo(memo: InputMemo, session: SessionDep) -> Memo:
     try:
         memo_id = uuid.uuid4()
-        memo.id = memo_id
-        memo.created_at = int(time.time())
+        memo_data = {
+            "id": memo_id,
+            "title": memo.title,
+            "content": memo.content,
+            "created_at": int(time.time())
+        }
+        memo = Memo(**memo_data)
         session.add(memo)
 
         extractedWords = named_entity_recognition([memo.title, memo.content])
