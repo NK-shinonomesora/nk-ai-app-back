@@ -8,6 +8,11 @@ CUSTOM_MESSAGES = {
     "string_too_long": "{input}は{max_length}文字以下で入力してください。",
 }
 
+JAPANESE_MESSAGE = {
+    "title": "タイトル",
+    "content": "内容",
+}
+
 def convert_errors(e: ValidationError) -> List[ErrorDetails]:
     new_errors: List[ErrorDetails] = []
     for error in e.errors():
@@ -15,8 +20,9 @@ def convert_errors(e: ValidationError) -> List[ErrorDetails]:
         if custom_message:
             ctx = error.get('ctx')
             input = error.get("loc")
+
             error['msg'] = (
-                custom_message.format(input=input[1], **ctx) if ctx else custom_message
+                custom_message.format(input=JAPANESE_MESSAGE.get(input[1]), **ctx) if ctx else custom_message
             )
         new_errors.append(error)
     return new_errors
