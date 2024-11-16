@@ -145,8 +145,11 @@ def read_memo(
     memo_id: str,
     session: SessionDep,
 ) -> Dict[str, Memo]:
-    statement = select(Memo.id, Memo.title, Memo.content, Memo.created_at).where(Memo.id == memo_id)
-    memo = session.exec(statement).one()
+    # statement = select(Memo.id, Memo.title, Memo.content, Memo.created_at).where(Memo.id == memo_id)
+    # memo = session.exec(statement).one()
+    memo = session.get(Memo, memo_id)
+    if memo is None:
+        raise HTTPException(status_code=404, detail="存在しないページにアクセスしました。")
     return {"memo": memo}
 
 @app.get("/memos/")
