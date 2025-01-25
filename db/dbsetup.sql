@@ -27,14 +27,26 @@ CREATE TABLE memo_annotation (
     -- FOREIGN KEY (annotation_id) REFERENCES annotation_master(id)
 );
 
+DROP TABLE IF EXISTS user;
+CREATE TABLE user (
+    id INT NOT NULL AUTO_INCREMENT,
+    user_id VARCHAR(64) NOT NULL,
+    password VARCHAR(64) NOT NULL,
+    session_id VARCHAR(64),
+    session_id_created_at INT,
+    PRIMARY KEY (id)
+    -- FOREIGN KEY (memo_id) REFERENCES memo(id),
+    -- FOREIGN KEY (annotation_id) REFERENCES annotation_master(id)
+);
+
 -- INSERT INTO memo VALUES
 -- (0, 'dummy', 'dummy', 1731120815);
 
 INSERT INTO annotation_master VALUES
-(1, 'Programming', 'C言語'),
-(2, 'Programming', 'Java'),
-(3, 'Database', 'MySQL'),
-(4, 'Database', 'Oracle Database');
+(1, 'programming', 'C言語'),
+(2, 'programming', 'Java'),
+(3, 'database', 'MySQL'),
+(4, 'database', 'Oracle Database');
 
 -- INSERT INTO memo_annotation VALUES
 -- (1, '0001A', 1),
@@ -42,5 +54,8 @@ INSERT INTO annotation_master VALUES
 -- (3, '0001B', 2),
 -- (4, '0001B', 4),
 -- (5, '0001C', 1);
+
+INSERT INTO user VALUES
+(1, '0001A', '58922dc82937a44156ff0c13908b4ce4f9aa04d02d47043fad6ac71287896715', NULL, NULL);
 
 SET foreign_key_checks = 1;

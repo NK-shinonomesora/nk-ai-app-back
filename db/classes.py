@@ -5,7 +5,7 @@ from sqlmodel import Field as ModelField
 from typing import Optional
 
 class InputMessage(BaseModel):
-    text: str = Field(min_length=1, max_length=10)
+    text: str = Field(min_length=1, max_length=1000)
 
     @field_validator('text')
     def text_must_not_equal_hello(cls, v):
@@ -22,8 +22,8 @@ class TwoInputMessage(BaseModel):
     secondText: str
 
 class InputMemo(BaseModel):
-    title: str = Field(min_length=1, max_length=10)
-    content: str = Field(min_length=1, max_length=10)
+    title: str = Field(min_length=1, max_length=50)
+    content: str = Field(min_length=1, max_length=1000)
     @field_validator('title')
     def title_word_count_check(cls, v):
         if v == 'hello':
@@ -33,6 +33,10 @@ class InputMemo(BaseModel):
                 dict(wrong_value=v),
             )
         return v
+    
+class InputUser(BaseModel):
+    id: str = Field(min_length=1, max_length=32)
+    password: str = Field(min_length=1, max_length=64)
 
 class Memo(SQLModel, table=True):
     id: str = ModelField(primary_key=True)
@@ -49,3 +53,10 @@ class Annotation_Master(SQLModel, table=True):
     id: Optional[int] = ModelField(primary_key=True)
     label: str
     word: str
+
+class User(SQLModel, table=True):
+    id: Optional[int] = ModelField(primary_key=True)
+    user_id: str
+    password: str
+    session_id: str
+    session_id_created_at: int

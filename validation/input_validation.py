@@ -4,6 +4,7 @@ from pydantic import ValidationError, field_validator
 
 # カスタムエラーメッセージ
 CUSTOM_MESSAGES = {
+    "missing": "{input}は必須項目です。",
     "string_too_short": "{input}は必須項目です。",
     "string_too_long": "{input}は{max_length}文字以下で入力してください。",
 }
@@ -11,6 +12,8 @@ CUSTOM_MESSAGES = {
 JAPANESE_MESSAGE = {
     "title": "タイトル",
     "content": "内容",
+    "id": "ID",
+    "password": "パスワード",
 }
 
 def convert_errors(e: ValidationError) -> List[ErrorDetails]:
