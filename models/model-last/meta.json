@@ -23,7 +23,6 @@
     "ner":[
       "CARDINAL",
       "DATE",
-      "Database",
       "EVENT",
       "FAC",
       "GPE",
@@ -40,11 +39,13 @@
       "PET_NAME",
       "PHONE",
       "PRODUCT",
-      "Programming",
       "QUANTITY",
       "TIME",
       "TITLE_AFFIX",
-      "WORK_OF_ART"
+      "WORK_OF_ART",
+      "database",
+      "programming",
+      "webserver"
     ]
   },
   "pipeline":[
@@ -63,18 +64,23 @@
     "ents_p":1.0,
     "ents_r":1.0,
     "ents_per_type":{
-      "Programming":{
+      "programming":{
         "p":1.0,
         "r":1.0,
         "f":1.0
       },
-      "Database":{
+      "database":{
+        "p":1.0,
+        "r":1.0,
+        "f":1.0
+      },
+      "webserver":{
         "p":1.0,
         "r":1.0,
         "f":1.0
       }
     },
     "tok2vec_loss":0.0,
-    "ner_loss":0.0000000142
+    "ner_loss":0.0000114177
   }
 }

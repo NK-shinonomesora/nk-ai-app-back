@@ -43,10 +43,31 @@ CREATE TABLE user (
 -- (0, 'dummy', 'dummy', 1731120815);
 
 INSERT INTO annotation_master VALUES
-(1, 'programming', 'C言語'),
-(2, 'programming', 'Java'),
-(3, 'database', 'MySQL'),
-(4, 'database', 'Oracle Database');
+(1, 'programming', 'Python'),
+(2, 'programming', 'JavaScript'),
+(3, 'programming', 'React'),
+(4, 'programming', 'Node.js'),
+(5, 'programming', 'Java'),
+(6, 'programming', 'C++'),
+(7, 'programming', 'Ruby'),
+(8, 'programming', 'Ruby On Rails'),
+(9, 'programming', 'C#'),
+(10, 'programming', '.NETフレームワーク'),
+(11, 'programming', 'PHP'),
+(12, 'database', 'MySQL'),
+(13, 'database', 'PostgreSQL'),
+(14, 'database', 'Microsoft SQL Server'),
+(15, 'database', 'Oracle Database'),
+(16, 'database', 'SQLite'),
+(17, 'programming', 'プログラミング'),
+(18, 'database', 'データベース'),
+(19, 'webserver', 'Webサーバ'),
+(20, 'webserver', 'Nginx'),
+(21, 'webserver', 'Apache'),
+(22, 'webserver', 'LiteSpeed'),
+(23, 'webserver', 'Caddy'),
+(24, 'webserver', 'Cherokee')
+;
 
 -- INSERT INTO memo_annotation VALUES
 -- (1, '0001A', 1),

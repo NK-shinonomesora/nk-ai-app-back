@@ -103,7 +103,7 @@ def named_entity_recognition(texts: List[str]):
     return lastResult
 
 @app.post("/memo/")
-async def create_memo(memo: InputMemo, session: SessionDep) -> Memo:
+async def create_memo(memo: InputMemo, session: SessionDep):
     try:
         memo_id = uuid.uuid4()
         memo_data = {
@@ -116,6 +116,12 @@ async def create_memo(memo: InputMemo, session: SessionDep) -> Memo:
         session.add(memo)
 
         extractedWords = named_entity_recognition([memo.title, memo.content])
+
+        if not extractedWords:
+            session.commit()
+            session.refresh(memo)
+            return
+
         annotationMasterIds = []
         for word, label in extractedWords.items():
             statement = select(Annotation_Master.id).where(
@@ -123,7 +129,13 @@ async def create_memo(memo: InputMemo, session: SessionDep) -> Memo:
                 Annotation_Master.word == word
             )
             id = session.exec(statement).all()
-            annotationMasterIds.append(id)
+            if id:
+                annotationMasterIds.append(id)
+
+        if not annotationMasterIds:
+            session.commit()
+            session.refresh(memo)
+            return
         
         for annotation_id in annotationMasterIds:
             model = Memo_Annotation()
@@ -134,8 +146,6 @@ async def create_memo(memo: InputMemo, session: SessionDep) -> Memo:
         session.commit()
         session.refresh(memo)
         session.refresh(model)
-
-        return memo
     
     except Exception as e:
         session.rollback()
@@ -164,14 +174,25 @@ def read_memos(
 @app.get("/memo/search/")
 def search_memo(keyword: str, session: SessionDep):
     extractedWords = named_entity_recognition([keyword])
+
+    if not extractedWords:
+        return
+
     annotationMasters = []
     for word, label in extractedWords.items():
         statement = select(Annotation_Master.id, Annotation_Master.label).where(
             Annotation_Master.label == label,
             Annotation_Master.word == word
         )
-        data = session.exec(statement).one()
+        try:
+            data = session.exec(statement).one()
+        except Exception as e:
+            return
+        
         annotationMasters.append(data)
+            
+    if not annotationMasters:
+        return
     
     memoAnnotations = session.exec(select(Memo_Annotation.memo_id, Memo_Annotation.annotation_id)).all()
     scores = {}
@@ -195,7 +216,7 @@ def search_memo(keyword: str, session: SessionDep):
                 scores[memo_id] = score
 
     sortedScores = sorted(scores.items(), reverse=True, key=lambda x : x[1])
-    topTwoScores = sortedScores[:3]
+    topTwoScores = sortedScores[:5]
     
     memos = []
 
